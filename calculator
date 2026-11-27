@@ -1,0 +1,107 @@
+#include <cmath>
+#include <deque>
+#include <iomanip>
+#include <iostream>
+#include <sstream>
+#include <string>
+
+struct Calculation {
+    std::string expression;
+    double result;
+};
+
+bool calculate(double left, const std::string& operation, double right, double& result) {
+    if (operation == "+") result = left + right;
+    else if (operation == "-") result = left - right;
+    else if (operation == "*") result = left * right;
+    else if (operation == "/") {
+        if (right == 0) {
+            std::cout << "Error: cannot divide by zero.\n";
+            return false;
+        }
+        result = left / right;
+    } else if (operation == "%") {
+        if (right == 0) {
+            std::cout << "Error: cannot take remainder with zero.\n";
+            return false;
+        }
+        result = std::fmod(left, right);
+    } else if (operation == "^") {
+        result = std::pow(left, right);
+    } else {
+        std::cout << "Unknown operator. Use +, -, *, /, %, or ^.\n";
+        return false;
+    }
+
+    if (!std::isfinite(result)) {
+        std::cout << "Error: that calculation has no finite result.\n";
+        return false;
+    }
+    return true;
+}
+
+bool parseNumber(const std::string& text, double& value) {
+    try {
+        std::size_t used = 0;
+        value = std::stod(text, &used);
+        return used == text.size() && std::isfinite(value);
+    } catch (...) {
+        return false;
+    }
+}
+
+void showHistory(const std::deque<Calculation>& history) {
+    if (history.empty()) {
+        std::cout << "No calculations yet.\n";
+        return;
+    }
+    std::cout << "Recent calculations (oldest first):\n";
+    for (const Calculation& item : history) {
+        std::cout << "  " << item.expression << " = " << item.result << '\n';
+    }
+}
+
+int main() {
+    std::deque<Calculation> history;
+    std::string line;
+
+    std::cout << "Calculator: enter <number> <operator> <number>, history, or quit.\n"
+              << "Operators: +  -  *  /  %  ^ (power)\n";
+
+    while (true) {
+        std::cout << "> ";
+        if (!std::getline(std::cin, line)) break;
+
+        std::istringstream input(line);
+        std::string first;
+        if (!(input >> first)) continue;
+        if (first == "quit" || first == "exit") break;
+        if (first == "history") {
+            showHistory(history);
+            continue;
+        }
+
+        std::string operation;
+        std::string rightText;
+        std::string extra;
+        double left;
+        double right;
+        if (!(input >> operation >> rightText) || (input >> extra) ||
+            !parseNumber(first, left) || !parseNumber(rightText, right)) {
+            std::cout << "Invalid input. Enter, for example, 12.5 * 2, or type history/quit.\n";
+            continue;
+        }
+
+        double result;
+        if (!calculate(left, operation, right, result)) continue;
+
+        std::ostringstream expression;
+        expression << first << ' ' << operation << ' ' << rightText;
+        history.push_back({expression.str(), result});
+        if (history.size() > 10) history.pop_front();
+        std::cout << "= " << std::setprecision(12) << result << '\n';
+    }
+
+    std::cout << "Goodbye!\n";
+    return 0;
+}
